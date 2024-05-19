@@ -2,7 +2,9 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"os"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -11,7 +13,13 @@ import (
 var DB *mongo.Database
 
 func InitDB() {
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+	mongoHost := os.Getenv("MONGO_HOST")
+	mongoPort := os.Getenv("MONGO_PORT")
+	mongoUser := os.Getenv("MONGO_INITDB_ROOT_USERNAME")
+	mongoPass := os.Getenv("MONGO_INITDB_ROOT_PASSWORD")
+	mongoURI := fmt.Sprintf("mongodb://%s:%s@%s:%s", mongoUser, mongoPass, mongoHost, mongoPort)
+
+	clientOptions := options.Client().ApplyURI(mongoURI)
 	client, err := mongo.Connect(context.TODO(), clientOptions)
 	if err != nil {
 		log.Fatal(err)
