@@ -1,19 +1,20 @@
-package api
+package main
 
 import (
 	"log"
 	"net/http"
 
-	"github.com/gorilla/mux"
+	"github.com/myroslavve/genesis-test-case/src/api"
+	"github.com/myroslavve/genesis-test-case/src/db"
 )
 
 func main() {
-	// Create a new router
-	r := mux.NewRouter()
+	// Initialize the database
+	db.InitDB()
+	api.SetDB()
 
-	// Register handlers
-	r.HandleFunc("/api/rate", RateHandler).Methods("GET")
-	r.HandleFunc("/api/subscribe", SubscribeHandler).Methods("POST")
+	// Initialize routes
+	r := api.InitializeRoutes()
 
 	// Start the server on port 8080
 	log.Println("Server listening on port 8080")

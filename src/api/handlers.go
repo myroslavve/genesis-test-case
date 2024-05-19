@@ -1,49 +1,58 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
-	"sync"
+	"time"
+
+	"github.com/myroslavve/genesis-test-case/src/db"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
-// Response struct for JSON responses
 type Response struct {
-    Message string `json:"message"`
+	Message string `json:"message"`
 }
 
-// In-memory store for subscriptions
-var emailSubscriptions = struct {
-    sync.RWMutex
-    emails map[string]bool
-}{emails: make(map[string]bool)}
+var collection *mongo.Collection
+
+func SetDB() {
+	collection = db.GetCollection("subscriptions")
+}
 
 // Handler for the "/rate" endpoint
 func RateHandler(w http.ResponseWriter, r *http.Request) {
-    // Mock response for exchange rate, replace with actual API call
-    rate := 27.5
-    w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(rate)
+	rate := 27.5 // Replace with actual rate fetching logic
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(rate)
 }
 
 // Handler for the "/subscribe" endpoint
 func SubscribeHandler(w http.ResponseWriter, r *http.Request) {
-    email := r.FormValue("email")
-    if email == "" {
-        http.Error(w, "Invalid request", http.StatusBadRequest)
-        return
-    }
+	email := r.FormValue("email")
+	if email == "" {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
 
-    emailSubscriptions.Lock()
-    defer emailSubscriptions.Unlock()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-    if _, exists := emailSubscriptions.emails[email]; exists {
-        http.Error(w, "Email already subscribed", http.StatusConflict)
-        return
-    }
+	var result bson.M
+	err := collection.FindOne(ctx, bson.M{"email": email}).Decode(&result)
+	if err == nil {
+		http.Error(w, "Email already subscribed", http.StatusConflict)
+		return
+	}
 
-    emailSubscriptions.emails[email] = true
+	_, err = collection.InsertOne(ctx, bson.M{"email": email})
+	if err != nil {
+		http.Error(w, "Failed to subscribe email", http.StatusInternalServerError)
+		return
+	}
 
-    response := Response{Message: "Email subscribed"}
-    w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(response)
+	response := Response{Message: "Email subscribed"}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }
