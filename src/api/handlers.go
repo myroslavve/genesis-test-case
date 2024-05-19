@@ -23,7 +23,12 @@ func SetDB() {
 
 // Handler for the "/rate" endpoint
 func RateHandler(w http.ResponseWriter, r *http.Request) {
-	rate := 27.5 // Replace with actual rate fetching logic
+	rate, err := FetchExchangeRate()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(rate)
 }
